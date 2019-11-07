@@ -162,10 +162,18 @@ function LM:sample(kwargs)
   local verbose = utils.get_kwarg(kwargs, 'verbose', 0)
   local sample = utils.get_kwarg(kwargs, 'sample', 1)
   local temperature = utils.get_kwarg(kwargs, 'temperature', 1)
+  local suppress = utils.get_kwarg(kwargs, 'suppress', '')
 
   local sampled = torch.LongTensor(1, T)
   self:resetStates()
-  print(self.token_to_idx)
+
+  local suppress_idx = {}
+  for i = 1, #suppress do
+    local c = suppress:sub(i, i)
+    local idx = self.token_to_idx[c]
+    assert(idx ~= nil, 'Invalid token in -suppress: ' .. c)
+    table.insert(suppress_idx, idx)
+  end
 
   local scores, first_t
   if #start_text > 0 then
@@ -192,13 +200,12 @@ function LM:sample(kwargs)
       _, next_char = scores:max(3)
       next_char = next_char[{{}, {}, 1}]
     else
-       local probs = torch.div(scores, temperature):double():exp():squeeze()
-       probs:div(torch.sum(probs))
-       --probs[29] = 0
-       --probs[12] = 0
-       probs[1] = 0
-       probs[55] = 0
-       next_char = torch.multinomial(probs, 1):view(1, 1)
+      local probs = torch.div(scores, temperature):double():exp():squeeze()
+      probs:div(torch.sum(probs))
+      for _, idx in pairs(suppress_idx) do
+        probs[idx] = 0
+      end
+      next_char = torch.multinomial(probs, 1):view(1, 1)
     end
     sampled[{{}, {t, t}}]:copy(next_char)
     scores = self:forward(next_char)
