@@ -165,6 +165,7 @@ function LM:sample(kwargs)
 
   local sampled = torch.LongTensor(1, T)
   self:resetStates()
+  print(self.token_to_idx)
 
   local scores, first_t
   if #start_text > 0 then
@@ -193,6 +194,10 @@ function LM:sample(kwargs)
     else
        local probs = torch.div(scores, temperature):double():exp():squeeze()
        probs:div(torch.sum(probs))
+       --probs[29] = 0
+       --probs[12] = 0
+       probs[1] = 0
+       probs[55] = 0
        next_char = torch.multinomial(probs, 1):view(1, 1)
     end
     sampled[{{}, {t, t}}]:copy(next_char)
