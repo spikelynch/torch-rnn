@@ -173,6 +173,12 @@ function LM:sample(kwargs)
     local idx = self.token_to_idx[c]
     assert(idx ~= nil, 'Invalid token in -suppress: ' .. c)
     table.insert(suppress_idx, idx)
+    if c >= 'a' and c <= 'z' then
+      idx = self.token_to_idx[c:upper()]
+      if idx ~= nil then
+        table.insert(suppress_idx, idx)
+      end
+    end
   end
 
   local scores, first_t
