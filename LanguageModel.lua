@@ -259,6 +259,8 @@ function LM:sample_hacked(kwargs, tuner)
     else
       local probs = torch.div(scores, temperature):double():exp():squeeze()
       probs:div(torch.sum(probs))
+      print("calling coroutine")
+      print(coroutine.status(tuner))
       local ok, weights = coroutine.resume(tuner, next_char)
       if ok then
         for token, weight in pairs(weights) do
@@ -268,7 +270,8 @@ function LM:sample_hacked(kwargs, tuner)
           end 
         end
       else
-        -- print("coroutine returned false")
+        print("coroutine returned false")
+        os.exit(-1)
       end
       next_char = torch.multinomial(probs, 1):view(1, 1)
     end
