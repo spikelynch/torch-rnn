@@ -269,6 +269,7 @@ function LM:sample_hacked(kwargs, tuner)
         end
       else
         print("coroutine returned false")
+        print(weights)
         os.exit(-1)
       end
       next_char = torch.multinomial(probs, 1):view(1, 1)
