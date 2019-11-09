@@ -30,13 +30,8 @@ local words = { "This", "is", "a", "simple", "set", "of", "words", "to", "match"
 
 function get_matches(prev, ws)
   local matches = {}
-  print("get_matches")
-  print(ws)
   for _, w in pairs(ws) do
-    print(w)
     wc = w:sub(1,1)
-    print("test against: ")
-    print(prev)
     if prev then
       if wc == prev then
         matches[wc] = 1
@@ -45,7 +40,6 @@ function get_matches(prev, ws)
       matches[wc] = 1
     end
   end
-  print(matches)
   return matches
 end
 
@@ -63,22 +57,14 @@ end
 
 tuner = coroutine.create(function(prev_char)
   local prev = nil
-  print("start tuner")
   print(words)
   while true
     do
-      print("in tuner loop")
       local weights = {}
       local matches = get_matches(prev, words)
-      print(matches)
       local weights = matches_to_weights(matches)
-      print(weights)
-      print(words)
       p = coroutine.yield(weights)
-      print(p[{1,1}])
-      local prev = model.idx_to_token[p[{1,1}]]
-      print(prev)
-      print(t)
+      prev = model.idx_to_token[p[{1,1}]]
     end
 end)
 
@@ -92,4 +78,4 @@ end
 
 local sample = model:sample_hacked(opt, tuner)
 
--- print(sample)
+print(sample)
