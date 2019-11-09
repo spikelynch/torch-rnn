@@ -9,6 +9,7 @@ require 'LanguageModel'
 
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
+cmd:option('-vocab', 'Projects/Musketeers/anatomy_of_melancholy.txt')
 cmd:option('-length', 5000)
 cmd:option('-start_text', '')
 cmd:option('-sample', 1)
@@ -25,12 +26,23 @@ local tokens = {}
 local msg
 if opt.verbose == 1 then print(msg) end
 
-local words = { "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india" }
+local words = {}
+
+print("Loading vocab from " .. opt.vocab)
+local f = io.open(opt.vocab, "r")
+local text = f:read("*all")
+for w in string.gmatch(text, "%S+") do
+  words[#words+1] = w
+end
+
+print(#words)
+
 
 
 function get_matches(ws)
   local matches = {}
   matches[' '] = 1
+  matches['\n'] = 1
   --print("get matches from words", ws)
   if ws then
     for _, w in pairs(ws) do
