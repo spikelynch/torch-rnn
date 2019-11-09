@@ -25,11 +25,12 @@ local tokens = {}
 local msg
 if opt.verbose == 1 then print(msg) end
 
-local words = { "This", "is", "a", "simple", "set", "of", "words", "to", "match" }
+local words = { "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india" }
 
 
 function get_matches(prev, ws)
   local matches = {}
+  matches[' '] = 1
   for _, w in pairs(ws) do
     wc = w:sub(1,1)
     if prev then
@@ -61,7 +62,7 @@ tuner = coroutine.create(function(prev_char)
   while true
     do
       local weights = {}
-      local matches = get_matches(prev, words)
+      local matches = get_matches(nil, words)
       local weights = matches_to_weights(matches)
       p = coroutine.yield(weights)
       prev = model.idx_to_token[p[{1,1}]]
