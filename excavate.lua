@@ -28,14 +28,13 @@ if opt.verbose == 1 then print(msg) end
 local words = { "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india" }
 
 
-function get_matches(prev, ws)
+function get_matches(ws)
   local matches = {}
   matches[' '] = 1
-  print('get_matches')
-  print(prev, ws)
+  --print("get matches from words", ws)
   if ws then
     for _, w in pairs(ws) do
-      matches[wc] = 1
+      matches[w:sub(1,1)] = 1
     end
   end
   return matches
@@ -53,9 +52,9 @@ function matches_to_weights(matches)
   return weights
 end
 
-function init_vocab()
+function init_vocab(ws)
   local v = {}
-  for i, w in pairs(words) do
+  for i, w in pairs(ws) do
     v[i] = w
   end
   return v
@@ -63,7 +62,7 @@ end
 
 function prune_vocab(ov, next_char)
   local v = {}
-  for _, w in pairs(words) do
+  for _, w in pairs(ov) do
     if next_char == w:sub(1, 1) then
       v[#v+1] = w:sub(2, #w)
     end
@@ -73,22 +72,25 @@ end
 
 
 tuner = coroutine.create(function(prev_char)
-  local vocab = init_vocab()
+  local vocab = init_vocab(words)
   while true
     do
       local weights = {}
       local matches = get_matches(vocab)
       local weights = matches_to_weights(matches)
+      --print("matches", matches)
       p = coroutine.yield(weights)
       local next_char = model.idx_to_token[p[{1,1}]]
-      print("Next: " .. next_char)
+      --print("Next: '" .. next_char .. "'")
+      --print("hit return to continue...")
+      --io.read()
       if next_char == ' ' then
-        vocab = init_vocab()
+        vocab = init_vocab(words)
       else
         vocab = prune_vocab(vocab, next_char)
         if #vocab < 1 then
           print("ran out of vocab")
-          vocab = init_vocab()
+          vocab = init_vocab(words)
         end
       end
     end

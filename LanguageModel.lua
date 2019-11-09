@@ -268,7 +268,7 @@ function LM:sample_hacked(kwargs, tuner)
           end 
         end
       else
-        print("coroutine returned false")
+        print("Error in tuning function")
         print(weights)
         os.exit(-1)
       end
