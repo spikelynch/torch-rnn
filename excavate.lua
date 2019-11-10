@@ -33,9 +33,7 @@ print("Loading vocab from " .. opt.vocab)
 local f = io.open(opt.vocab, "r")
 local text = f:read("*all")
 for w in string.gmatch(text, "%S+") do
-  if not (string.find(w, 'e') or string.find(w, 'E')) then
-    words[#words+1] = w
-  end
+  words[#words+1] = w
 end
 
 print(#words)
@@ -100,12 +98,13 @@ tuner = coroutine.create(function(prev_char)
       --print("Next: '" .. next_char .. "'")
       --print("hit return to continue...")
       --io.read()
-      if next_char == ' ' then
+      if next_char:match("%W") then
         vocab = init_vocab(words)
       else
         vocab = prune_vocab(vocab, next_char)
+        --print(vocab)
         if #vocab < 1 then
-          print("ran out of vocab")
+          --print("ran out of vocab")
           vocab = init_vocab(words)
         end
       end
@@ -113,6 +112,25 @@ tuner = coroutine.create(function(prev_char)
 end)
 
 
+
+alliterate = coroutine.create(function(prev_char)
+  local first_t = {}
+  first_t['t'] = 1
+  first_t['T'] = 1
+  first_t[' '] = 1
+  local weight_t = matches_to_weights(first_t)
+  local weights = weight_t
+  while true
+    do
+      p = coroutine.yield(weights)
+      local next_char = model.idx_to_token[p[{1,1}]]
+      if next_char:match("%W") then
+        weights = weight_t
+      else
+        weights = {}
+      end
+    end
+end)
 
 model:evaluate()
 

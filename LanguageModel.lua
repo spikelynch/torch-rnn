@@ -261,11 +261,13 @@ function LM:sample_hacked(kwargs, tuner)
       probs:div(torch.sum(probs))
       local ok, weights = coroutine.resume(tuner, next_char)
       if ok then
-        for token, weight in pairs(weights) do
-          local idx = self.token_to_idx[token]
-          if idx ~= nil then
-            probs[idx] = probs[idx] * weights[token]
-          end 
+        if weights then
+          for token, weight in pairs(weights) do
+            local idx = self.token_to_idx[token]
+            if idx ~= nil then
+              probs[idx] = probs[idx] * weights[token]
+            end 
+          end
         end
       else
         print("Error in tuning function")
