@@ -33,7 +33,9 @@ print("Loading vocab from " .. opt.vocab)
 local f = io.open(opt.vocab, "r")
 local text = f:read("*all")
 for w in string.gmatch(text, "%S+") do
-  words[#words+1] = w
+  if not (string.find(w, 'e') or string.find(w, 'E')) then
+    words[#words+1] = w
+  end
 end
 
 print(#words)
