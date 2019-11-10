@@ -1,5 +1,68 @@
 RNN: The Three Musketeers
 Vocab: The Three Musketeers with all words containing 'e' or 'E' removed
 
-almost awaits this ordinary finish that that which a finding him. His ordinary introduction into his room, and that of a man who madman and this, and that his champion of this moving had brought in a larding port. Four of thousand living air holding Milady that astonishing of gold happily, that his frightful stabbing him to him, to complain of spy that of a man who had taking any misanthropic lining. Shall now only find this lady and that submission with a building from this army, and had no long. Had his customary punishing with this guilty in this half-past, and which did not spot all that had sacrificing this morning, and rolling to his hoping. This last first drawn by this placing to such mad of a hunting sounds, and as that was that his faculty passant, though alarm was taking him to this lit timidly, that his addition was lost timidly. His was arriving that this proof of that party forth pistol at body stands from his duchy only things in his hand, or that his lit his company was to obstinacy. This ring was probably and in proportion, and as lat had by a sign to a long disgust as join in his guard, and that his task of bat lat. All this might happily, through pass of this sill--. drunk mad bring out; a rock, rushing placing som and wrongly paladins, and accompanying that through this woman who was accustom to that moral island in coming to that, in that past hair, had spot his round to giving this proof of by that misanthropic succumb----. dry his good lad; but don with that intimacy was not a man of such an actor, which had rally from his frightful provincial giving any unconsciously. Did not drawing him sharply, and with his hand and for this ring, which had falling still points that his wound than it was drawn by this woman who thus full of pray for his indulging his mast. His fathom mad in cash, and with that monstrous studs which his sword for this campaign with furnish, and succumb, and with what was a Royal, who accompanying that his door, which his must constantly should having lost that of that woman fainting; his sort of bat on his duchy, in a find of his hors, but shutting out his way, which singularly pouring in his furnish that this continuing that position, through his hors, carrying him away, in which a hand of his favor of his anchor, which in that frightful right was capac. Not that saying along it; that is truly, that of Porthos had risk in this lit. This provocation was about to say. This moving hors, which did not forgot that bottom thoughtful, that his void display had not conclusion and that shirt for an instant that had happy road, and that his watch morals in this man in his hand and loyal by this commission. But that was that this diamond moving him was a stag. You placing all this was morally affairs to him that shill his window, would having him a sign to givin him to taking thrash this sort of important timid for from that woman who was in his policy, and at last night---. drunk, as was his holy lit on account of that shadow intimacy faithful to his lack of any joyous void of his host, or ratify him, and asking alighting, on adding this conviction, quitting thoughts all this must bring a child of this last room. His hand of this lit clasping us two waving to having doubt that of thought, but as long as it was through thought hail: And having turn that if was to combat through an awk; his saddling with all this password to him to run to that of thought along in this world. His port, talking at his two thousand livid, and through this woman could bring him anything. I wish to finish, this mortal pistol points and thoughtful, that it was his hot. His hands brought back that was to providing this conviction, and pushing to having him somn of thought, and at this to bring him that his lit his mast, plung; this was that M. disapproving this lady of this sword in this magistra- and who was constantly shady complaint. His honor had brought our own costing a lit droll, and his must bring him that his glass, his with a man who had brought with all his way to this look at that most distinguishing this passion, that this intimacy hours which obtaining from this champion of his way. His honor to obtain saying, as was thrown on this mining in this placing of this ground, thanks to that morning hoping, asking his hors, allowing with it, that his part was going. Fort on this ring, without risk of his own hands and of thought, had should assassinating, short shaking on his facing night, and with that affair was that shutting his mouth, drunk with thirst. Donna calling him to him. His lungs; and that his foot mania-- ours, should not making a long timid soft and against thoroughly animals. Aramis had discussing this man admitting his turn to that of this woman, had only first thought that his void shado paladins, his court to which, though flag of voluntarily motions by this situation. It was nothing but that of this Guards, hi	
-(base) Kolhari:torch-rnn mike$ 
+almost awaits this ordinary finish that that which a finding him. His ordinary
+introduction into his room, and that of a man who madman and this, and that
+his champion of this moving had brought in a larding port. Four of thousand
+living air holding Milady that astonishing of gold happily, that his frightful
+stabbing him to him, to complain of spy that of a man who had taking any
+misanthropic lining. Shall now only find this lady and that submission with a
+building from this army, and had no long. Had his customary punishing with
+this guilty in this half-past, and which did not spot all that had sacrificing
+this morning, and rolling to his hoping. This last first drawn by this placing
+to such mad of a hunting sounds, and as that was that his faculty passant,
+though alarm was taking him to this lit timidly, that his addition was lost
+timidly. His was arriving that this proof of that party forth pistol at body
+stands from his duchy only things in his hand, or that his lit his company was
+to obstinacy. This ring was probably and in proportion, and as lat had by a
+sign to a long disgust as join in his guard, and that his task of bat lat. All
+this might happily, through pass of this sill--. drunk mad bring out; a rock,
+rushing placing som and wrongly paladins, and accompanying that through this
+woman who was accustom to that moral island in coming to that, in that past
+hair, had spot his round to giving this proof of by that misanthropic
+succumb----. dry his good lad; but don with that intimacy was not a man of
+such an actor, which had rally from his frightful provincial giving any
+unconsciously. Did not drawing him sharply, and with his hand and for this
+ring, which had falling still points that his wound than it was drawn by this
+woman who thus full of pray for his indulging his mast. His fathom mad in
+cash, and with that monstrous studs which his sword for this campaign with
+furnish, and succumb, and with what was a Royal, who accompanying that his
+door, which his must constantly should having lost that of that woman
+fainting; his sort of bat on his duchy, in a find of his hors, but shutting
+out his way, which singularly pouring in his furnish that this continuing that
+position, through his hors, carrying him away, in which a hand of his favor of
+his anchor, which in that frightful right was capac. Not that saying along it;
+that is truly, that of Porthos had risk in this lit. This provocation was
+about to say. This moving hors, which did not forgot that bottom thoughtful,
+that his void display had not conclusion and that shirt for an instant that
+had happy road, and that his watch morals in this man in his hand and loyal by
+this commission. But that was that this diamond moving him was a stag. You
+placing all this was morally affairs to him that shill his window, would
+having him a sign to givin him to taking thrash this sort of important timid
+for from that woman who was in his policy, and at last night---. drunk, as was
+his holy lit on account of that shadow intimacy faithful to his lack of any
+joyous void of his host, or ratify him, and asking alighting, on adding this
+conviction, quitting thoughts all this must bring a child of this last room.
+His hand of this lit clasping us two waving to having doubt that of thought,
+but as long as it was through thought hail: And having turn that if was to
+combat through an awk; his saddling with all this password to him to run to
+that of thought along in this world. His port, talking at his two thousand
+livid, and through this woman could bring him anything. I wish to finish, this
+mortal pistol points and thoughtful, that it was his hot. His hands brought
+back that was to providing this conviction, and pushing to having him somn of
+thought, and at this to bring him that his lit his mast, plung; this was that
+M. disapproving this lady of this sword in this magistra- and who was
+constantly shady complaint. His honor had brought our own costing a lit droll,
+and his must bring him that his glass, his with a man who had brought with all
+his way to this look at that most distinguishing this passion, that this
+intimacy hours which obtaining from this champion of his way. His honor to
+obtain saying, as was thrown on this mining in this placing of this ground,
+thanks to that morning hoping, asking his hors, allowing with it, that his
+part was going. Fort on this ring, without risk of his own hands and of
+thought, had should assassinating, short shaking on his facing night, and with
+that affair was that shutting his mouth, drunk with thirst. Donna calling him
+to him. His lungs; and that his foot mania-- ours, should not making a long
+timid soft and against thoroughly animals. Aramis had discussing this man
+admitting his turn to that of this woman, had only first thought that his void
+shado paladins, his court to which, though flag of voluntarily motions by this
+situation. It was nothing but that of this Guards, hi
