@@ -3,6 +3,7 @@ require 'nn'
 
 require 'LanguageModel'
 
+local punctuation = " \n.:;,“”-()_"
 
 -- version of sample which passes in a coroutine to mess with 
 -- the probability weights
@@ -41,8 +42,9 @@ print(#words)
 
 function get_matches(ws)
   local matches = {}
-  matches[' '] = 1
-  matches['\n'] = 1
+  for i = 1, #punctuation do
+    matches[punctuation:sub(i,i)] = 1
+  end
   --print("get matches from words", ws)
   if ws then
     for _, w in pairs(ws) do
@@ -107,6 +109,7 @@ tuner = coroutine.create(function(prev_char)
       end
     end
 end)
+
 
 
 model:evaluate()
