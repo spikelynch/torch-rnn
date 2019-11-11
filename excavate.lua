@@ -11,6 +11,7 @@ local punctuation = " \n.:;,“”-()_"
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
 cmd:option('-vocab', 'Projects/Musketeers/anatomy_of_melancholy.txt')
+cmd:option('-alliterate', '')
 cmd:option('-length', 5000)
 cmd:option('-start_text', '')
 cmd:option('-sample', 1)
@@ -112,25 +113,26 @@ tuner = coroutine.create(function(prev_char)
 end)
 
 
-
-alliterate = coroutine.create(function(prev_char)
-  local first_t = {}
-  first_t['t'] = 1
-  first_t['T'] = 1
-  first_t[' '] = 1
-  local weight_t = matches_to_weights(first_t)
-  local weights = weight_t
-  while true
-    do
-      p = coroutine.yield(weights)
-      local next_char = model.idx_to_token[p[{1,1}]]
-      if next_char:match("%W") then
-        weights = weight_t
-      else
-        weights = {}
+function make_alliterate(char)
+  return coroutine.create(function(prev_char)
+    local first_t = {}
+    first_t[char] = 1
+    first_t[char:upper()] = 1
+    first_t[' '] = 1
+    local weight_t = matches_to_weights(first_t)
+    local weights = weight_t
+    while true
+      do
+        p = coroutine.yield(weights)
+        local next_char = model.idx_to_token[p[{1,1}]]
+        if next_char:match("%W") then
+          weights = weight_t
+        else
+          weights = {}
+        end
       end
-    end
-end)
+  end)
+end
 
 model:evaluate()
 
@@ -138,7 +140,11 @@ for idx, token in pairs(model.idx_to_token) do
   tokens[token] = 1
 end
 
+local mod = tuner
 
-local sample = model:sample_hacked(opt, tuner)
+if opt.alliterate then
+  mod = make_alliterate(opt.alliterate:sub(1,1))
+end
 
+local sample = model:sample_hacked(opt, mod)
 print(sample)
