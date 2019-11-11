@@ -3,7 +3,6 @@ require 'nn'
 
 require 'LanguageModel'
 
-local punctuation = " \n.:;,“”-()_"
 
 -- version of sample which passes in a coroutine to mess with 
 -- the probability weights
@@ -24,6 +23,8 @@ local checkpoint = torch.load(opt.checkpoint)
 local model = checkpoint.model
 
 local tokens = {}
+local punctuation = {}
+
 
 local msg
 if opt.verbose == 1 then print(msg) end
@@ -40,13 +41,15 @@ end
 print(#words)
 
 
-
 function get_matches(ws)
+  local punct2 = " \n.:;,“”-()_"
   local matches = {}
-  for i = 1, #punctuation do
-    matches[punctuation:sub(i,i)] = 1
+  for p, _ in pairs(punctuation) do
+    matches[p] = 1
   end
-  --print("get matches from words", ws)
+  -- for i = 1, #punct2 do
+  --   matches[punct2:sub(i, i)] = 1
+  -- end
   if ws then
     for _, w in pairs(ws) do
       matches[w:sub(1,1)] = 1
@@ -93,19 +96,13 @@ tuner = coroutine.create(function(prev_char)
       local weights = {}
       local matches = get_matches(vocab)
       local weights = matches_to_weights(matches)
-      --print("matches", matches)
       p = coroutine.yield(weights)
       local next_char = model.idx_to_token[p[{1,1}]]
-      --print("Next: '" .. next_char .. "'")
-      --print("hit return to continue...")
-      --io.read()
       if next_char:match("%W") then
         vocab = init_vocab(words)
       else
         vocab = prune_vocab(vocab, next_char)
-        --print(vocab)
         if #vocab < 1 then
-          --print("ran out of vocab")
           vocab = init_vocab(words)
         end
       end
@@ -138,13 +135,26 @@ model:evaluate()
 
 for idx, token in pairs(model.idx_to_token) do
   tokens[token] = 1
+  if token:match('%W') then
+    punctuation[token] = 1
+  end
 end
 
-local mod = tuner
+local ps = {}
 
-if opt.alliterate then
-  mod = make_alliterate(opt.alliterate:sub(1,1))
+for p, _ in pairs(punctuation) do
+  ps[#ps + 1] = p
 end
 
-local sample = model:sample_hacked(opt, mod)
+print(table.concat(ps, ''))
+
+--print(tokens, punctuation)
+
+-- local mod = tuner
+
+-- if opt.alliterate then
+--   mod = make_alliterate(opt.alliterate:sub(1,1))
+-- end
+
+local sample = model:sample_hacked(opt, tuner)
 print(sample)
