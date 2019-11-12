@@ -7,15 +7,23 @@ require 'LanguageModel'
 -- version of sample which passes in a coroutine to mess with 
 -- the probability weights
 
+
+-- try doing the punctuation comparison by index rather than token
+-- I think it's a wide character issue
+
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
 cmd:option('-vocab', 'Projects/Musketeers/anatomy_of_melancholy.txt')
+cmd:option('-notpunct', '’')
+cmd:option('-suppress', '')
 cmd:option('-alliterate', '')
 cmd:option('-length', 5000)
 cmd:option('-start_text', '')
 cmd:option('-sample', 1)
 cmd:option('-temperature', .3)
 cmd:option('-verbose', 0)
+
+
 local opt = cmd:parse(arg)
 
 
@@ -35,21 +43,21 @@ print("Loading vocab from " .. opt.vocab)
 local f = io.open(opt.vocab, "r")
 local text = f:read("*all")
 for w in string.gmatch(text, "%S+") do
-  words[#words+1] = w
+  if not (w:find('e') or w:find('E')) then
+    words[#words+1] = w
+  end
 end
 
 print(#words)
 
+local punct2 = " \n.:;,“”-()_"
+
 
 function get_matches(ws)
-  local punct2 = " \n.:;,“”-()_"
   local matches = {}
   for p, _ in pairs(punctuation) do
     matches[p] = 1
   end
-  -- for i = 1, #punct2 do
-  --   matches[punct2:sub(i, i)] = 1
-  -- end
   if ws then
     for _, w in pairs(ws) do
       matches[w:sub(1,1)] = 1
@@ -91,6 +99,7 @@ end
 
 tuner = coroutine.create(function(prev_char)
   local vocab = init_vocab(words)
+  local current_word = ''
   while true
     do
       local weights = {}
@@ -98,9 +107,16 @@ tuner = coroutine.create(function(prev_char)
       local weights = matches_to_weights(matches)
       p = coroutine.yield(weights)
       local next_char = model.idx_to_token[p[{1,1}]]
-      if next_char:match("%W") then
+      if current_word == 'd' and next_char == ' ' then
+        -- print(matches)
+      end
+      if punctuation[next_char] then
         vocab = init_vocab(words)
+        print(current_word)
+        print(next_char)
+        current_word = ''
       else
+        current_word = current_word .. next_char
         vocab = prune_vocab(vocab, next_char)
         if #vocab < 1 then
           vocab = init_vocab(words)
@@ -135,7 +151,7 @@ model:evaluate()
 
 for idx, token in pairs(model.idx_to_token) do
   tokens[token] = 1
-  if token:match('%W') then
+  if token:match('%W') and not opt.notpunct:find("%" .. token) then
     punctuation[token] = 1
   end
 end
@@ -146,9 +162,11 @@ for p, _ in pairs(punctuation) do
   ps[#ps + 1] = p
 end
 
-print(table.concat(ps, ''))
+print("Punctuation" .. table.concat(ps, ''))
 
 --print(tokens, punctuation)
+
+--os.exit()
 
 -- local mod = tuner
 
