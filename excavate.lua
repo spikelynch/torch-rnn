@@ -1,6 +1,8 @@
 require 'torch'
 require 'nn'
 
+utf8 = require 'lua-utf8'
+
 require 'LanguageModel'
 
 
@@ -11,14 +13,15 @@ require 'LanguageModel'
 -- try doing the punctuation comparison by index rather than token
 -- I think it's a wide character issue
 
+
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
-cmd:option('-vocab', 'Projects/Musketeers/anatomy_of_melancholy.txt')
---cmd:option('-notpunct', '’')
-cmd:option('-notpunct', '')
+cmd:option('-vocab', 'Projects/Musketeers/Musketeers.txt')
+cmd:option('-notpunct', '’')
+--cmd:option('-notpunct', '')
 cmd:option('-suppress', '')
 cmd:option('-alliterate', '')
-cmd:option('-length', 5000)
+cmd:option('-length', 1000)
 cmd:option('-start_text', '')
 cmd:option('-sample', 1)
 cmd:option('-temperature', .3)
@@ -40,7 +43,6 @@ if opt.verbose == 1 then print(msg) end
 
 local wmap = {}
 
-print("Loading vocab from " .. opt.vocab)
 local f = io.open(opt.vocab, "r")
 local text = f:read("*all")
 local suppressPat = nil
@@ -63,10 +65,27 @@ for w, _ in pairs(wmap) do
   words[ #words + 1 ] = w
 end
 
-print(#words)
 
 
 local punct2 = " \n.:;,“”-()_"
+
+
+function utf8first(s)
+  local o2 = utf8.offset(s, 1)
+  if o2 == nil then
+    return s
+  else
+    return s:sub(1, o2 - 1)
+  end
+end
+
+
+
+
+
+-- it's a problem with wide characters (smart quotes etc) in the
+-- source vocab file - they are not being matched
+-- look at how the vocab files are loaded
 
 
 function get_matches(ws)
@@ -76,16 +95,22 @@ function get_matches(ws)
   end
   if ws then
     for _, w in pairs(ws) do
-      local idx = model.token_to_idx[w:sub(1,1)]
-      if idx ~= nil then
-        matches[idx] = 1
-      else
-        --print("unknown token: " .. w:sub(1,1))
+      if w then
+        local idx = model.token_to_idx[utf8first(w)]
+        if idx ~= nil then
+          matches[idx] = 1
+        else
+          -- print("unknown first char in '" .. w .. "'")
+          -- print("'" .. utf8first(w) .. "'")
+        end
       end
     end
   end
   return matches
 end
+
+
+
 
 function matches_to_weights(matches)
   local weights = {}
@@ -107,11 +132,20 @@ function init_vocab(ws)
   return v
 end
 
+-- check that this is following non-ascii characters
+-- it isn't
+
+
+
 function prune_vocab(ov, next_char)
   local v = {}
   for _, w in pairs(ov) do
-    if next_char == w:sub(1, 1) then
-      v[#v+1] = w:sub(2, #w)
+    local f = utf8first(w)
+    if next_char == f then
+      local n = w:sub(#f + 1, #w)
+      if n then
+        v[#v+1] = n
+      end
     end
   end
   return v
@@ -129,13 +163,8 @@ tuner = coroutine.create(function(prev_char)
       p = coroutine.yield(weights)
       local next_idx = p[{1,1}]
       local next_char = model.idx_to_token[next_idx]
-      if current_word == 'd' and next_char == ' ' then
-        print(matches)
-      end
       if punctuation[next_idx] then
         vocab = init_vocab(words)
-        print(current_word)
-        print(next_char)
         current_word = ''
       else
         current_word = current_word .. next_char
@@ -151,9 +180,9 @@ end)
 function make_alliterate(char)
   return coroutine.create(function(prev_char)
     local first_t = {}
-    first_t[char] = 1
-    first_t[char:upper()] = 1
-    first_t[' '] = 1
+    first_t[model.token_to_idx[char]] = 1
+    first_t[model.token_to_idx[char:upper()]] = 1
+    first_t[model.token_to_idx[' ']] = 1
     local weight_t = matches_to_weights(first_t)
     local weights = weight_t
     while true
@@ -171,27 +200,28 @@ end
 
 model:evaluate()
 
+local punctpat = nil
+if opt.notpunct then
+  punctpat = '[' .. opt.notpunct .. ']'
+end
+
 for idx, token in pairs(model.idx_to_token) do
   tokens[idx] = 1
-  if token:match('%W') and not opt.notpunct:find("%" .. token) then
-    punctuation[idx] = 1
+  if token:match('%W') then
+    if not punctpat or not (utf8.match(token, punctpat)) then 
+      punctuation[idx] = 1
+    end
   end
 end
 
-print("Tokens")
 
+local sample = nil
 
+if opt.alliterate then
+  mod = make_alliterate(opt.alliterate:sub(1,1))
+  sample = model:sample_hacked(opt, mod)
+else
+  sample = model:sample_hacked(opt, tuner)
+end
 
-print(tokens, punctuation)
-
-
-
-
--- local mod = tuner
-
--- if opt.alliterate then
---   mod = make_alliterate(opt.alliterate:sub(1,1))
--- end
-
-local sample = model:sample_hacked(opt, tuner)
 print(sample)
