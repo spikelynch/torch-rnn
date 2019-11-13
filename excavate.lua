@@ -14,7 +14,8 @@ require 'LanguageModel'
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
 cmd:option('-vocab', 'Projects/Musketeers/anatomy_of_melancholy.txt')
-cmd:option('-notpunct', '’')
+--cmd:option('-notpunct', '’')
+cmd:option('-notpunct', '')
 cmd:option('-suppress', '')
 cmd:option('-alliterate', '')
 cmd:option('-length', 5000)
@@ -37,18 +38,33 @@ local punctuation = {}
 local msg
 if opt.verbose == 1 then print(msg) end
 
-local words = {}
+local wmap = {}
 
 print("Loading vocab from " .. opt.vocab)
 local f = io.open(opt.vocab, "r")
 local text = f:read("*all")
+local suppressPat = nil
+if #opt.suppress > 0 then
+  suppressPat = '[' .. opt.suppress .. ']'
+end
 for w in string.gmatch(text, "%S+") do
-  if not (w:find('e') or w:find('E')) then
-    words[#words+1] = w
+  if suppressPat then
+    if not w:find(suppressPat) then
+      wmap[w] = 1
+    end
+  else
+    wmap[w] = 1
   end
 end
 
+local words = {}
+
+for w, _ in pairs(wmap) do
+  words[ #words + 1 ] = w
+end
+
 print(#words)
+
 
 local punct2 = " \n.:;,“”-()_"
 
@@ -60,7 +76,12 @@ function get_matches(ws)
   end
   if ws then
     for _, w in pairs(ws) do
-      matches[w:sub(1,1)] = 1
+      local idx = model.token_to_idx[w:sub(1,1)]
+      if idx ~= nil then
+        matches[idx] = 1
+      else
+        --print("unknown token: " .. w:sub(1,1))
+      end
     end
   end
   return matches
@@ -68,11 +89,11 @@ end
 
 function matches_to_weights(matches)
   local weights = {}
-  for token, _ in pairs(tokens) do
-    if matches[token] ~= nil then
-      weights[token] = 1
+  for idx, _ in pairs(tokens) do
+    if matches[idx] ~= nil then
+      weights[idx] = 1
     else
-      weights[token] = 0
+      weights[idx] = 0
     end
   end
   return weights
@@ -106,11 +127,12 @@ tuner = coroutine.create(function(prev_char)
       local matches = get_matches(vocab)
       local weights = matches_to_weights(matches)
       p = coroutine.yield(weights)
-      local next_char = model.idx_to_token[p[{1,1}]]
+      local next_idx = p[{1,1}]
+      local next_char = model.idx_to_token[next_idx]
       if current_word == 'd' and next_char == ' ' then
-        -- print(matches)
+        print(matches)
       end
-      if punctuation[next_char] then
+      if punctuation[next_idx] then
         vocab = init_vocab(words)
         print(current_word)
         print(next_char)
@@ -150,23 +172,20 @@ end
 model:evaluate()
 
 for idx, token in pairs(model.idx_to_token) do
-  tokens[token] = 1
+  tokens[idx] = 1
   if token:match('%W') and not opt.notpunct:find("%" .. token) then
-    punctuation[token] = 1
+    punctuation[idx] = 1
   end
 end
 
-local ps = {}
+print("Tokens")
 
-for p, _ in pairs(punctuation) do
-  ps[#ps + 1] = p
-end
 
-print("Punctuation" .. table.concat(ps, ''))
 
---print(tokens, punctuation)
+print(tokens, punctuation)
 
---os.exit()
+
+
 
 -- local mod = tuner
 

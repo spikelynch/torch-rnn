@@ -262,10 +262,9 @@ function LM:sample_hacked(kwargs, tuner)
       local ok, weights = coroutine.resume(tuner, next_char)
       if ok then
         if weights then
-          for token, weight in pairs(weights) do
-            local idx = self.token_to_idx[token]
-            if idx ~= nil then
-              probs[idx] = probs[idx] * weights[token]
+          for idx, weight in pairs(weights) do
+            if probs[idx] ~= nil then
+              probs[idx] = probs[idx] * weights[idx]
             end 
           end
         end
