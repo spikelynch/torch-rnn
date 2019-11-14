@@ -20,12 +20,12 @@ cmd:option('-vocab', 'Projects/Musketeers/Musketeers.txt')
 cmd:option('-notpunct', '’')
 --cmd:option('-notpunct', '')
 cmd:option('-suppress', '')
+cmd:option('-excavate', 0)
 cmd:option('-alliterate', '')
 cmd:option('-length', 1000)
 cmd:option('-start_text', '')
 cmd:option('-sample', 1)
 cmd:option('-temperature', .3)
-cmd:option('-verbose', 0)
 
 
 local opt = cmd:parse(arg)
@@ -38,10 +38,28 @@ local tokens = {}
 local punctuation = {}
 
 
-local msg
-if opt.verbose == 1 then print(msg) end
+
+model:evaluate()
+
+local punctpat = nil
+if opt.notpunct ~= '' then
+  punctpat = '[' .. opt.notpunct .. ']'
+end
+
+for idx, token in pairs(model.idx_to_token) do
+  tokens[idx] = 1
+  if token:match('%W') then
+    if not punctpat or not (utf8.match(token, punctpat)) then 
+      punctuation[idx] = 1
+    end
+  end
+end
+
+
+
 
 local wmap = {}
+local words = {}
 
 local f = io.open(opt.vocab, "r")
 local text = f:read("*all")
@@ -52,22 +70,24 @@ end
 for w in string.gmatch(text, "%S+") do
   if suppressPat then
     if not w:find(suppressPat) then
-      wmap[w] = 1
+      -- wmap[w] = 1
+      words[#words + 1] = w
     end
   else
-    wmap[w] = 1
+    -- wmap[w] = 1
+    words[#words + 1] = w
   end
 end
 
-local words = {}
 
-for w, _ in pairs(wmap) do
-  words[ #words + 1 ] = w
-end
+-- for w, _ in pairs(wmap) do
+--     words[ #words + 1 ] = w
+-- end
+
+print(#words)
 
 
 
-local punct2 = " \n.:;,“”-()_"
 
 
 function utf8first(s)
@@ -83,9 +103,6 @@ end
 
 
 
--- it's a problem with wide characters (smart quotes etc) in the
--- source vocab file - they are not being matched
--- look at how the vocab files are loaded
 
 
 function get_matches(ws)
@@ -124,6 +141,8 @@ function matches_to_weights(matches)
   return weights
 end
 
+
+
 function init_vocab(ws)
   local v = {}
   for i, w in pairs(ws) do
@@ -132,13 +151,10 @@ function init_vocab(ws)
   return v
 end
 
--- check that this is following non-ascii characters
--- it isn't
-
 
 
 function prune_vocab(ov, next_char)
-  local v = {}
+  local v = { "\n", " " }
   for _, w in pairs(ov) do
     local f = utf8first(w)
     if next_char == f then
@@ -152,30 +168,68 @@ function prune_vocab(ov, next_char)
 end
 
 
-tuner = coroutine.create(function(prev_char)
-  local vocab = init_vocab(words)
-  local current_word = ''
-  while true
-    do
-      local weights = {}
-      local matches = get_matches(vocab)
-      local weights = matches_to_weights(matches)
-      p = coroutine.yield(weights)
-      local next_idx = p[{1,1}]
-      local next_char = model.idx_to_token[next_idx]
-      if punctuation[next_idx] then
-        vocab = init_vocab(words)
-        current_word = ''
-      else
-        current_word = current_word .. next_char
-        vocab = prune_vocab(vocab, next_char)
-        if #vocab < 1 then
-          vocab = init_vocab(words)
+function make_vocab(vocab_gen)
+  return coroutine.create(function(prev_char)
+    local ok, vocab = coroutine.resume(vocab_gen, nil)
+    local current_word = ''
+    while ok
+      do
+        local weights = {}
+        local matches = get_matches(vocab)
+        local weights = matches_to_weights(matches)
+        p = coroutine.yield(weights)
+        local next_idx = p[{1,1}]
+        local next_char = model.idx_to_token[next_idx]
+        if punctuation[next_idx] then
+          --print('"' .. current_word .. '" -> "' .. next_char .. '"')
+          ok, vocab = coroutine.resume(vocab_gen, current_word)
+          current_word = ''
+        else
+          current_word = current_word .. next_char
+          vocab = prune_vocab(vocab, next_char)
+          if #vocab < 1 then
+            ok, vocab = coroutine.resume(vocab_gen, nil)
+          end
         end
       end
-    end
+      error("Vocabulary exhausted")
+  end)
+end
+
+
+local basic_vocab = coroutine.create(function(used_word)
+  while true do
+    coroutine.yield(init_vocab(words))
+  end
 end)
 
+
+-- very simple, doesn't keep track of word locations
+
+local MAX_AHEAD = 500
+
+local excavate_vocab = coroutine.create(function(used_word)
+  local used_word = nil
+  while #words > 0 do
+    --print("excavate_vocab")
+    --print(used_word)
+    if used_word ~= nil then
+      local i = 0
+      while #words > 0 and not utf8.match(words[1], '^' .. used_word) do
+        table.remove(words, 1)
+        i = i + 1
+      end
+      --print("Skipped " .. tostring(i) .. " words to " .. used_word)
+    end
+    if #words > 0 then
+      --print(#words)
+      local lookahead = { unpack(words, 1, MAX_AHEAD) }
+      --print(#lookahead)
+      used_word = coroutine.yield(init_vocab(lookahead))
+    end
+  end
+  print("Vocabulary finished") 
+end)
 
 function make_alliterate(char)
   return coroutine.create(function(prev_char)
@@ -198,30 +252,21 @@ function make_alliterate(char)
   end)
 end
 
-model:evaluate()
-
-local punctpat = nil
-if opt.notpunct then
-  punctpat = '[' .. opt.notpunct .. ']'
-end
-
-for idx, token in pairs(model.idx_to_token) do
-  tokens[idx] = 1
-  if token:match('%W') then
-    if not punctpat or not (utf8.match(token, punctpat)) then 
-      punctuation[idx] = 1
-    end
-  end
-end
 
 
 local sample = nil
 
-if opt.alliterate then
-  mod = make_alliterate(opt.alliterate:sub(1,1))
+if opt.alliterate ~= '' then
+  local mod = make_alliterate(opt.alliterate:sub(1,1))
   sample = model:sample_hacked(opt, mod)
 else
+  if opt.excavate ~= 0 then
+    local tuner = make_vocab(excavate_vocab)
+    sample = model:sample_hacked(opt, tuner)
+  else
+    local tuner = make_vocab(basic_vocab)
   sample = model:sample_hacked(opt, tuner)
+  end
 end
 
 print(sample)
