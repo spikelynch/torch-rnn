@@ -1,8 +1,11 @@
 require 'torch'
 require 'nn'
 
-local cjson = require 'cjson'
-local cjson2 = cjson.new()
+--local cjson = require 'cjson'
+--local cjson2 = cjson.new()
+
+local pretty = require "resty.prettycjson"
+
 utf8 = require 'lua-utf8'
 
 require 'LanguageModel'
@@ -88,7 +91,17 @@ end
 --     words[ #words + 1 ] = w
 -- end
 
-print(#words)
+local vdump = opt.outdir .. '/' .. opt.name .. '.vocab.txt'
+
+local vfile = io.open(vdump, 'w')
+
+for i = 1, #words do
+  vfile:write(tostring(i) .. ': ' .. words[i] .. "\n")
+end
+
+vfile:close()
+
+print("Vocab of " .. tostring(#words) .. " written to " .. vdump)
 
 
 
@@ -282,7 +295,7 @@ local jsonfilename = opt.outdir .. '/' .. opt.name .. '.json'
 local textfilename = opt.outdir .. '/' .. opt.name .. '.txt'
 
 local jsonfile = io.open(jsonfilename, "w")
-jsonfile:write(cjson2.encode({ words = word_indices }))
+jsonfile:write(pretty({ words = word_indices }))
 jsonfile:close()
 
 print("Wrote word indices to " .. jsonfilename)
