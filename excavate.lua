@@ -1,6 +1,8 @@
 require 'torch'
 require 'nn'
 
+local cjson = require 'cjson'
+local cjson2 = cjson.new()
 utf8 = require 'lua-utf8'
 
 require 'LanguageModel'
@@ -16,16 +18,18 @@ require 'LanguageModel'
 
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
-cmd:option('-vocab', 'Projects/Musketeers/Musketeers.txt')
+cmd:option('-vocab', '/Users/mike/Desktop/NaNoGenMo2019/Input/anatomy_of_melancholy.txt')
 cmd:option('-notpunct', '’')
 --cmd:option('-notpunct', '')
 cmd:option('-suppress', '')
-cmd:option('-excavate', 0)
+cmd:option('-excavate', 100)
 cmd:option('-alliterate', '')
 cmd:option('-length', 1000)
 cmd:option('-start_text', '')
 cmd:option('-sample', 1)
 cmd:option('-temperature', .3)
+cmd:option('-name', 'excavate')
+cmd:option('-outdir', '/Users/mike/Desktop/NaNoGenMo2019/Samples/')
 
 
 local opt = cmd:parse(arg)
@@ -208,22 +212,26 @@ end)
 
 local MAX_AHEAD = 500
 
+local word_indices = {}
+
 local excavate_vocab = coroutine.create(function(used_word)
   local used_word = nil
-  while #words > 0 do
+  local index = 1
+  while index <= #words do
     --print("excavate_vocab")
     --print(used_word)
     if used_word ~= nil then
-      local i = 0
-      while #words > 0 and not utf8.match(words[1], '^' .. used_word) do
-        table.remove(words, 1)
-        i = i + 1
+      while index <= #words and not utf8.match(words[index], '^' .. used_word) do
+        index = index + 1
+      end
+      if #used_word > 0 then
+        word_indices[ #word_indices + 1 ] = { index, used_word }
       end
       --print("Skipped " .. tostring(i) .. " words to " .. used_word)
     end
-    if #words > 0 then
+    if index <= #words then
       --print(#words)
-      local lookahead = { unpack(words, 1, MAX_AHEAD) }
+      local lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
       --print(#lookahead)
       used_word = coroutine.yield(init_vocab(lookahead))
     end
@@ -261,6 +269,7 @@ if opt.alliterate ~= '' then
   sample = model:sample_hacked(opt, mod)
 else
   if opt.excavate ~= 0 then
+    MAX_AHEAD = opt.excavate
     local tuner = make_vocab(excavate_vocab)
     sample = model:sample_hacked(opt, tuner)
   else
@@ -269,4 +278,19 @@ else
   end
 end
 
-print(sample)
+local jsonfilename = opt.outdir .. '/' .. opt.name .. '.json'
+local textfilename = opt.outdir .. '/' .. opt.name .. '.txt'
+
+local jsonfile = io.open(jsonfilename, "w")
+jsonfile:write(cjson2.encode({ words = word_indices }))
+jsonfile:close()
+
+print("Wrote word indices to " .. jsonfilename)
+
+local textfile = io.open(textfilename, "w")
+textfile:write(sample)
+textfile:close()
+
+print("Wrote text output to " .. textfilename)
+
+
