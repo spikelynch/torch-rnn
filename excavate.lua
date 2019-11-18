@@ -1,9 +1,8 @@
 require 'torch'
 require 'nn'
 
---local cjson = require 'cjson'
---local cjson2 = cjson.new()
-
+local cjson = require 'cjson'
+local cjson2 = cjson.new()
 local pretty = require "resty.prettycjson"
 
 utf8 = require 'lua-utf8'
@@ -21,7 +20,7 @@ require 'LanguageModel'
 
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
-cmd:option('-vocab', '/Users/mike/Desktop/NaNoGenMo2019/Input/anatomy_of_melancholy.txt')
+cmd:option('-vocab', 'aom_vocab.json')
 cmd:option('-notpunct', '’')
 --cmd:option('-notpunct', '')
 cmd:option('-suppress', '')
@@ -69,45 +68,32 @@ end
 local wmap = {}
 local words = {}
 
--- note - suppress underscores
 
 local f = io.open(opt.vocab, "r")
-local text = f:read("*all")
+local vjson = f:read("*all")
 local suppressPat = nil
 if #opt.suppress > 0 then
   suppressPat = '[' .. opt.suppress .. ']'
 end
-for w in string.gmatch(text, "%S+") do
-  if suppressPat then
-    if not w:find(suppressPat) then
+
+local vocabj = cjson2.decode(vjson)
+
+
+for _, iw in pairs(vocabj['words']) do
+  local w = iw[1]
+  local i = iw[0]
+  if w ~= "" then
+    if suppressPat then
+      if not w:find(suppressPat) then
+        -- wmap[w] = 1
+        words[#words + 1] = iw
+      end
+    else
       -- wmap[w] = 1
-      words[#words + 1] = w
+      words[#words + 1] = iw
     end
-  else
-    -- wmap[w] = 1
-    words[#words + 1] = w
   end
 end
-
-
--- for w, _ in pairs(wmap) do
---     words[ #words + 1 ] = w
--- end
-
-local vdump = opt.outdir .. '/' .. opt.name .. '.vocab.txt'
-
-local vfile = io.open(vdump, 'w')
-
-for i = 1, #words do
-  vfile:write(tostring(i) .. ': ' .. words[i] .. "\n")
-end
-
-vfile:close()
-
-print("Vocab of " .. tostring(#words) .. " written to " .. vdump)
-
-
-
 
 
 function utf8first(s)
@@ -162,11 +148,13 @@ function matches_to_weights(matches)
 end
 
 
+-- input to this is a list of [ index, words ]
+-- output is just words
 
 function init_vocab(ws)
   local v = {}
-  for i, w in pairs(ws) do
-    v[i] = w
+  for i, iw in pairs(ws) do
+    v[i] = iw[2]
   end
   return v
 end
@@ -201,7 +189,7 @@ function make_vocab(vocab_gen)
         local next_idx = p[{1,1}]
         local next_char = model.idx_to_token[next_idx]
         if punctuation[next_idx] then
-          --print('"' .. current_word .. '" -> "' .. next_char .. '"')
+          -- print('"' .. current_word .. '" -> "' .. next_char .. '"')
           ok, vocab = coroutine.resume(vocab_gen, current_word)
           current_word = ''
         else
@@ -224,26 +212,27 @@ local basic_vocab = coroutine.create(function(used_word)
 end)
 
 
--- very simple, doesn't keep track of word locations
-
 local MAX_AHEAD = 500
 
 local word_indices = {}
+
+-- now words is an array of [i, w] where i is the index from the
+-- vocab list.
+
+-- init_vocab strips the indices out and gives the RNN code just words
+-- and the matching in this bit tries to reinstate them
 
 local excavate_vocab = coroutine.create(function(used_word)
   local used_word = nil
   local index = 1
   while index <= #words do
-    --print("excavate_vocab")
-    --print(used_word)
     if used_word ~= nil then
-      while index <= #words and not utf8.match(words[index], '^' .. used_word) do
+      while index <= #words and not utf8.match(words[index][2], '^' .. used_word) do
         index = index + 1
       end
       if #used_word > 0 then
-        word_indices[ #word_indices + 1 ] = { index, used_word }
+        word_indices[ #word_indices + 1 ] = { words[index][1], used_word }
       end
-      --print("Skipped " .. tostring(i) .. " words to " .. used_word)
     end
     if index <= #words then
       local lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
