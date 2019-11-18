@@ -9,6 +9,7 @@ utf8 = require 'lua-utf8'
 
 require 'LanguageModel'
 
+local GARBAGE_INTERVAL = 10
 
 -- version of sample which passes in a coroutine to mess with 
 -- the probability weights
@@ -237,6 +238,10 @@ local excavate_vocab = coroutine.create(function(used_word)
     if index <= #words then
       local lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
       used_word = coroutine.yield(init_vocab(lookahead))
+      if index % GARBAGE_INTERVAL == 0 then
+        print("Memory: ", collectgarbage("count") * 1024)
+        collectgarbage()
+      end
     end
   end
   print("Vocabulary finished") 
@@ -264,6 +269,9 @@ function make_alliterate(char)
 end
 
 
+print("Memory: ", collectgarbage("count") * 1024)
+
+collectgarbage()
 
 local sample = nil
 
@@ -280,6 +288,9 @@ else
   sample = model:sample_hacked(opt, tuner)
   end
 end
+
+print("Memory: ", collectgarbage("count") * 1024)
+
 
 opt['wordcount'] = #word_indices
 
