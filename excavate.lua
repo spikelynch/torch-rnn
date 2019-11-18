@@ -34,6 +34,7 @@ cmd:option('-temperature', .3)
 cmd:option('-name', 'excavate')
 cmd:option('-outdir', '/Users/mike/Desktop/NaNoGenMo2019/Samples/')
 
+local END_OFFSET = 5
 
 local opt = cmd:parse(arg)
 
@@ -67,6 +68,8 @@ end
 
 local wmap = {}
 local words = {}
+
+-- note - suppress underscores
 
 local f = io.open(opt.vocab, "r")
 local text = f:read("*all")
@@ -243,9 +246,7 @@ local excavate_vocab = coroutine.create(function(used_word)
       --print("Skipped " .. tostring(i) .. " words to " .. used_word)
     end
     if index <= #words then
-      --print(#words)
       local lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
-      --print(#lookahead)
       used_word = coroutine.yield(init_vocab(lookahead))
     end
   end
@@ -291,11 +292,13 @@ else
   end
 end
 
+opt['wordcount'] = #word_indices
+
 local jsonfilename = opt.outdir .. '/' .. opt.name .. '.json'
 local textfilename = opt.outdir .. '/' .. opt.name .. '.txt'
 
 local jsonfile = io.open(jsonfilename, "w")
-jsonfile:write(pretty({ words = word_indices }))
+jsonfile:write(pretty({ words = word_indices, settings = opt }))
 jsonfile:close()
 
 print("Wrote word indices to " .. jsonfilename)

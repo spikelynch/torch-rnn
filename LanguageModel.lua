@@ -269,9 +269,9 @@ function LM:sample_hacked(kwargs, tuner)
           end
         end
       else
-        print("Error in tuning function")
-        print(weights)
-        os.exit(-1)
+        print("Tuning function exited")
+        print("Message" .. weights)
+        -- break and exit here both muck things up
       end
       next_char = torch.multinomial(probs, 1):view(1, 1)
     end
