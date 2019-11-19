@@ -9,7 +9,7 @@ utf8 = require 'lua-utf8'
 
 require 'LanguageModel'
 
-local GARBAGE_INTERVAL = 100
+local GARBAGE_INTERVAL = 1000
 
 -- version of sample which passes in a coroutine to mess with 
 -- the probability weights
@@ -21,10 +21,10 @@ local GARBAGE_INTERVAL = 100
 
 local cmd = torch.CmdLine()
 cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
-cmd:option('-vocab', 'aom_vocab.json')
+cmd:option('-vocab', '/Users/mike/Desktop/NaNoGenMo2019/Input/aom_vocab.txt')
 cmd:option('-notpunct', '’')
 --cmd:option('-notpunct', '')
-cmd:option('-suppress', '')
+--cmd:option('-suppress', '')
 cmd:option('-excavate', 100)
 cmd:option('-alliterate', '')
 cmd:option('-length', 1000)
@@ -71,46 +71,6 @@ end
 
 
 
-
-local wmap = {}
-local words = {}
-
-
-local f = io.open(opt.vocab, "r")
-local vjson = f:read("*all")
-local suppressPat = nil
-if #opt.suppress > 0 then
-  suppressPat = '[' .. opt.suppress .. ']'
-end
-
-local vocabj = cjson2.decode(vjson)
-
-
-for _, iw in pairs(vocabj['words']) do
-  local w = iw[1]
-  local i = iw[0]
-  if w ~= "" then
-    if suppressPat then
-      if not w:find(suppressPat) then
-        -- wmap[w] = 1
-        words[#words + 1] = i
-        words[#words + 1] = w
-      end
-    else
-      -- wmap[w] = 1
-      words[#words + 1] = i
-      words[#words + 1] = w
-    end
-  end
-end
-
-vocabj = nil
-
-collectgarbage()
-print("Loaded JSON", collectgarbage('count') * 1024)
-
-os.exit(-1)
-
 function utf8first(s)
   local o2 = utf8.offset(s, 1)
   if o2 == nil then
@@ -119,11 +79,6 @@ function utf8first(s)
     return s:sub(1, o2 - 1)
   end
 end
-
-
-
-
-
 
 
 function get_matches(ws)
@@ -177,7 +132,7 @@ end
 
 -- lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
 
-function init_vocab(ws, start, nwords)
+function init_vocab_orig_2(ws, start, nwords)
   local v = {}
   for i = start, start + nwords - 1 do 
     v[i - start + 1] = ws[i][2]
@@ -185,6 +140,14 @@ function init_vocab(ws, start, nwords)
   return v
 end
 
+
+function init_vocab(ws)
+  local v = {}
+  for i = 1, #ws do 
+    v[i] = ws[i][2]
+  end
+  return v
+end
 
 
 function prune_vocab(ov, next_char)
@@ -216,21 +179,17 @@ function make_vocab(vocab_gen)
         local next_char = model.idx_to_token[next_idx]
         if punctuation[next_idx] then
           -- print('"' .. current_word .. '" -> "' .. next_char .. '"')
-          vocab = nil
           ok, vocab = coroutine.resume(vocab_gen, current_word)
           current_word = ''
         else
           current_word = current_word .. next_char
           vocab = prune_vocab(vocab, next_char)
           if #vocab < 1 then
-            vocab = nil
             ok, vocab = coroutine.resume(vocab_gen, nil)
           end
         end
-        matches = nil
-        weights = nil
       end
-      error("Vocabulary exhausted")
+      --error("Vocabulary exhausted")
   end)
 end
 
@@ -252,7 +211,7 @@ local word_indices = {}
 -- init_vocab strips the indices out and gives the RNN code just words
 -- and the matching in this bit tries to reinstate them
 
-local excavate_vocab = coroutine.create(function(used_word)
+local excavate_vocab_old = coroutine.create(function(used_word)
   local used_word = nil
   local index = 1
   while index <= #words do
@@ -270,13 +229,75 @@ local excavate_vocab = coroutine.create(function(used_word)
       local newv = init_vocab(words, index, MAX_AHEAD)
       used_word = coroutine.yield(newv)
       if index % GARBAGE_INTERVAL == 0 then
-        print("Memory: ", collectgarbage("count") * 1024)
+        print("Sampling: ", collectgarbage("count") * 1024)
         collectgarbage()
       end
     end
   end
   print("Vocabulary finished") 
 end)
+
+
+
+local fetch_word = coroutine.create(function()
+  print("Opening " .. opt.vocab)
+  local f = io.open(opt.vocab, 'r')
+  if not f then
+    print("couldn't open " .. opt.vocab)
+    os.exit()
+  end
+  local line
+  repeat
+    line = f:read()
+    if line then
+      local i, w = line:match("([^,]+),(.*)")
+      coroutine.yield({ i, w })
+    end
+  until line == nil 
+end)
+
+
+-- first stab at pulling words off the vocab one at a time
+
+local excavate_vocab = coroutine.create(function(uw)
+  local used_word = ''
+  local words = {}
+  local vocab_left = true
+  local tick = 0
+  for j = 1, MAX_AHEAD do
+    vocab_left, words[j] = coroutine.resume(fetch_word)
+  end
+  while vocab_left do
+    local index = 1
+    while index <= #words and not utf8.match(words[index][2], '^' .. used_word) do
+        index = index + 1
+    end
+    if #used_word > 0 then
+      word_indices[#word_indices + 1] = { words[index][1], used_word }
+    end
+    if index < #words then
+      for j = index + 1, #words do
+        words[j - index] = words[j]
+      end
+    end
+    for j = #words - index + 1, #words do
+      if vocab_left then
+        vocab_left, words[j] = coroutine.resume(fetch_word)
+      end
+    end
+    local vocab = init_vocab(words)
+    used_word = coroutine.yield(vocab)
+    tick = tick + 1
+    if tick % GARBAGE_INTERVAL == 0 then
+      print("Memory: ", collectgarbage("count") * 1024)
+      collectgarbage()
+    end
+  end
+  print("Vocabulary finished") 
+end)
+
+
+
 
 function make_alliterate(char)
   return coroutine.create(function(prev_char)
@@ -320,8 +341,12 @@ else
   end
 end
 
-print("Memory: ", collectgarbage("count") * 1024)
 
+print("End sampling:", collectgarbage("count") * 1024)
+
+collectgarbage()
+
+print("After collection:", collectgarbage("count") * 1024)
 
 opt['wordcount'] = #word_indices
 
