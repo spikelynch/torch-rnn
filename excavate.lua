@@ -39,6 +39,9 @@ local END_OFFSET = 5
 local opt = cmd:parse(arg)
 
 
+print("Start", collectgarbage('count') * 1024)
+
+
 local checkpoint = torch.load(opt.checkpoint)
 local model = checkpoint.model
 
@@ -48,6 +51,9 @@ local punctuation = {}
 
 
 model:evaluate()
+
+print("Loaded RNN", collectgarbage('count') * 1024)
+
 
 local punctpat = nil
 if opt.notpunct ~= '' then
