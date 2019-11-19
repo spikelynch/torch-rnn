@@ -9,7 +9,7 @@ utf8 = require 'lua-utf8'
 
 require 'LanguageModel'
 
-local GARBAGE_INTERVAL = 10
+local GARBAGE_INTERVAL = 100
 
 -- version of sample which passes in a coroutine to mess with 
 -- the probability weights
@@ -96,6 +96,10 @@ for _, iw in pairs(vocabj['words']) do
   end
 end
 
+vocabj = nil
+
+collectgarbage()
+print("Loaded JSON", collectgarbage('count') * 1024)
 
 function utf8first(s)
   local o2 = utf8.offset(s, 1)
@@ -152,10 +156,21 @@ end
 -- input to this is a list of [ index, words ]
 -- output is just words
 
-function init_vocab(ws)
+function init_vocab_orig(ws)
   local v = {}
   for i, iw in pairs(ws) do
     v[i] = iw[2]
+  end
+  return v
+end
+
+
+-- lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
+
+function init_vocab(ws, start, nwords)
+  local v = {}
+  for i = start, start + nwords - 1 do 
+    v[i - start + 1] = ws[i][2]
   end
   return v
 end
@@ -191,15 +206,19 @@ function make_vocab(vocab_gen)
         local next_char = model.idx_to_token[next_idx]
         if punctuation[next_idx] then
           -- print('"' .. current_word .. '" -> "' .. next_char .. '"')
+          vocab = nil
           ok, vocab = coroutine.resume(vocab_gen, current_word)
           current_word = ''
         else
           current_word = current_word .. next_char
           vocab = prune_vocab(vocab, next_char)
           if #vocab < 1 then
+            vocab = nil
             ok, vocab = coroutine.resume(vocab_gen, nil)
           end
         end
+        matches = nil
+        weights = nil
       end
       error("Vocabulary exhausted")
   end)
@@ -208,7 +227,7 @@ end
 
 local basic_vocab = coroutine.create(function(used_word)
   while true do
-    coroutine.yield(init_vocab(words))
+    coroutine.yield(init_vocab(words, 1, #words))
   end
 end)
 
@@ -236,8 +255,10 @@ local excavate_vocab = coroutine.create(function(used_word)
       end
     end
     if index <= #words then
-      local lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
-      used_word = coroutine.yield(init_vocab(lookahead))
+      -- I suspect this is where it's leaking
+      -- local lookahead = { unpack(words, index, index + MAX_AHEAD - 1) }
+      local newv = init_vocab(words, index, MAX_AHEAD)
+      used_word = coroutine.yield(newv)
       if index % GARBAGE_INTERVAL == 0 then
         print("Memory: ", collectgarbage("count") * 1024)
         collectgarbage()

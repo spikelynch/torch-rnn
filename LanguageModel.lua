@@ -273,6 +273,8 @@ function LM:sample_hacked(kwargs, tuner)
         print("Message: " .. weights)
         os.exit(-1)
         -- break and exit here both muck things up
+        -- need to break but then pad out the sampled tensor with
+        -- spaces or something
       end
       next_char = torch.multinomial(probs, 1):view(1, 1)
     end
