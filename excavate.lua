@@ -93,11 +93,13 @@ for _, iw in pairs(vocabj['words']) do
     if suppressPat then
       if not w:find(suppressPat) then
         -- wmap[w] = 1
-        words[#words + 1] = iw
+        words[#words + 1] = i
+        words[#words + 1] = w
       end
     else
       -- wmap[w] = 1
-      words[#words + 1] = iw
+      words[#words + 1] = i
+      words[#words + 1] = w
     end
   end
 end
@@ -106,6 +108,8 @@ vocabj = nil
 
 collectgarbage()
 print("Loaded JSON", collectgarbage('count') * 1024)
+
+os.exit(-1)
 
 function utf8first(s)
   local o2 = utf8.offset(s, 1)
