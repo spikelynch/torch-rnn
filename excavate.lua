@@ -246,6 +246,7 @@ local excavate_vocab = coroutine.create(function(uw)
   for j = 1, MAX_AHEAD do
     vocab_left, words[j] = coroutine.resume(fetch_word)
   end
+  print(words)
   repeat
     local index = 1
     while index <= #words and not utf8.match(words[index][2], '^' .. used_word) do
@@ -333,7 +334,7 @@ print(opt)
 
 local sample = nil
 
-if opt.suppress then
+if opt.suppress ~= '' then
   vocab_filter = function(w)
     if utf8.match(w, '[' .. opt.suppress .. ']') then
       return true
@@ -363,11 +364,11 @@ else
   if opt.excavate ~= 0 then
     print("Running in excavate mode")
     MAX_AHEAD = opt.excavate
-    local tuner = make_vocab(excavate_vocab, vocab_filter)
+    local tuner = make_vocab(excavate_vocab)
     sample = model:sample_hacked(opt, tuner)
   else
     print("Running in whole-vocab mode")
-    local tuner = make_vocab(basic_vocab, vocab_filter)
+    local tuner = make_vocab(basic_vocab)
     sample = model:sample_hacked(opt, tuner)
   end
 end
