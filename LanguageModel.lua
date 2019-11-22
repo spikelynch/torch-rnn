@@ -251,7 +251,7 @@ function LM:sample_hacked(kwargs, tuner)
     first_t = 1
   end
   
-  local _, next_char = nil, nil
+  local _, next_char, last_char = nil, nil, nil
   for t = first_t, T do
     if sample == 0 then
       _, next_char = scores:max(3)
@@ -259,24 +259,27 @@ function LM:sample_hacked(kwargs, tuner)
     else
       local probs = torch.div(scores, temperature):double():exp():squeeze()
       probs:div(torch.sum(probs))
-      local ok, weights = coroutine.resume(tuner, next_char)
-      if ok then
-        if weights then
-          for idx, weight in pairs(weights) do
-            if probs[idx] ~= nil then
-              probs[idx] = probs[idx] * weights[idx]
-            end 
+      if coroutine.status(tuner) ~= 'dead' then
+        local ok, weights = coroutine.resume(tuner, next_char)
+        if ok then
+          if weights then
+            for idx, weight in pairs(weights) do
+              if probs[idx] ~= nil then
+                probs[idx] = probs[idx] * weights[idx]
+              end 
+            end
           end
+        else
+          print("Error in tuning function")
+          print("Message: " .. weights)
+          os.exit(-1)
         end
+        next_char = torch.multinomial(probs, 1):view(1, 1)
+        last_char = next_char
       else
-        print("Tuning function exited")
-        print("Message: " .. weights)
-        os.exit(-1)
-        -- break and exit here both muck things up
-        -- need to break but then pad out the sampled tensor with
-        -- spaces or something
+        -- hack to fill the buffer with the last char when the coroutine ends
+        next_char = last_char
       end
-      next_char = torch.multinomial(probs, 1):view(1, 1)
     end
     sampled[{{}, {t, t}}]:copy(next_char)
     scores = self:forward(next_char)
