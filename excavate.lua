@@ -18,7 +18,7 @@ local GARBAGE_INTERVAL = 1000
 -- apply alliteration as a filter to vocab
 
 local cmd = torch.CmdLine()
-cmd:option('-checkpoint', 'Projects/Musketeers/Musketeers2/Musketeers2_cp_176000.t7')
+cmd:option('-checkpoint', '')
 cmd:option('-vocab', '')
 cmd:option('-notpunct', '’')
 --cmd:option('-notpunct', '')
@@ -30,7 +30,7 @@ cmd:option('-start_text', '')
 cmd:option('-sample', 1)
 cmd:option('-temperature', .3)
 cmd:option('-name', 'excavate')
-cmd:option('-outdir', '/Users/mike/Desktop/NaNoGenMo2019/Samples/')
+cmd:option('-outdir', '')
 
 local END_OFFSET = 5
 
@@ -246,7 +246,6 @@ local excavate_vocab = coroutine.create(function(uw)
   for j = 1, MAX_AHEAD do
     vocab_left, words[j] = coroutine.resume(fetch_word)
   end
-  print(words)
   repeat
     local index = 1
     while index <= #words and not utf8.match(words[index][2], '^' .. used_word) do
@@ -330,16 +329,14 @@ end
 
 collectgarbage()
 
-print(opt)
-
 local sample = nil
 
 if opt.suppress ~= '' then
   vocab_filter = function(w)
     if utf8.match(w, '[' .. opt.suppress .. ']') then
-      return true
-    else
       return false
+    else
+      return true
     end
   end
 end
