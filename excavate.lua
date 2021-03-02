@@ -24,6 +24,7 @@ cmd:option('-notpunct', '’')
 --cmd:option('-notpunct', '')
 cmd:option('-alliterate', '')
 cmd:option('-suppress', '')
+cmd:option('-acrostic', '')
 cmd:option('-excavate', 0)
 cmd:option('-length', 1000)
 cmd:option('-start_text', '')
@@ -31,6 +32,7 @@ cmd:option('-sample', 1)
 cmd:option('-temperature', .3)
 cmd:option('-name', 'excavate')
 cmd:option('-outdir', '')
+cmd:option('-gpu', -1)
 
 local END_OFFSET = 5
 
@@ -305,12 +307,12 @@ function make_suppressor(forbid)
     for _, idx in pairs(model.token_to_idx) do
       weights[idx] = 1
     end
-    print("Forbidden: ", forbid)
+    -- print("Forbidden: ", forbid)
     for i = 1, #forbid do
       local c = forbid:sub(i,i)
       local idx = model.token_to_idx[c]
       if idx ~= nil then
-        weights[idx] =0
+        weights[idx] = 0
       else
         print("unknown character", c)
       end
@@ -322,6 +324,86 @@ function make_suppressor(forbid)
   end)
 end
 
+
+function make_oulipian(forbid, alliterate)
+  return coroutine.create(function(prev_char)
+    local first_t = {}
+    first_t[model.token_to_idx[alliterate]] = 1
+    first_t[model.token_to_idx[alliterate:upper()]] = 1
+    first_t[model.token_to_idx[' ']] = 1
+    local fweight_t = matches_to_weights(first_t)
+    local weight_t = {}
+    for _, idx in pairs(model.token_to_idx) do
+      weight_t[idx] = 1
+    end
+    for i = 1, #forbid do
+      local c = forbid:sub(i,i)
+      local idx = model.token_to_idx[c]
+      if idx ~= nil then
+        weight_t[idx] = 0
+        fweight_t[idx] = 0
+      else
+        print("unknown character", c)
+      end
+    end
+    local weights = {}
+    while true
+      do
+        p = coroutine.yield(weights)
+        local next_char = model.idx_to_token[p[{1,1}]]
+        if next_char:match("%W") then
+          weights = fweight_t
+        else
+          weights = weight_t 
+        end
+      end
+  end)
+end
+
+
+
+
+-- this needs to cycle through the letters of the acrostic
+-- on each first letters
+-- to be autoacrostic, the maker need to feed back into 
+-- this
+
+function make_acrostic(acrostic)
+  return coroutine.create(function(prev_char)
+    local a = 1
+    print("acrostic = " .. acrostic)
+    print("first char = " .. acrostic:sub(a, a))
+    local weight_f = acrostic_weights(acrostic:sub(a, a)) -- first char is acrostic
+    local weights = weight_ts
+    local ac_last = false
+    while true
+      do
+        p = coroutine.yield(weights)
+        local next_char = model.idx_to_token[p[{1,1}]]
+        if next_char:match("%W") then
+          weights = acrostic_weights(acrostic:sub(a, a))
+          ac_last = true
+        else
+          weights = {}
+          if ac_last then
+            a = a + 1
+            if a > string.len(acrostic) then
+              a = 1
+            end
+            ac_last = false
+          end
+        end
+      end
+  end)
+end
+
+function acrostic_weights(char)
+  local first_t = {}
+  first_t[model.token_to_idx[char]] = 1
+  first_t[model.token_to_idx[char:upper()]] = 1
+  first_t[model.token_to_idx[' ']] = 1
+  return matches_to_weights(first_t)
+end
 
 
 
@@ -344,17 +426,29 @@ end
 
 
 if opt.vocab == '' then
-  if opt.alliterate ~= '' then
-    print("Running in alliterate mode")
-    local mod = make_alliterate(opt.alliterate:sub(1,1))
+  if opt.acrostic ~= '' then
+    print("Running in acrostic mode")
+    local mod = make_acrostic(opt.acrostic)
     sample = model:sample_hacked(opt, mod)
   else
-    if opt.suppress ~= '' then
-      print("Running in simple oulipo mode")
-      local mod = make_suppressor(opt.suppress)
-      sample = model:sample_hacked(opt, mod)
+    if opt.alliterate ~= '' then
+      if opt.suppress ~= '' then
+        print("Running in alliterate + suppress mode")
+        local mod = make_oulipian(opt.suppress, opt.alliterate:sub(1,1))
+        sample = model:sample_hacked(opt, mod)
+      else
+        print("Running in alliterate mode")
+        local mod = make_alliterate(opt.alliterate:sub(1,1))
+        sample = model:sample_hacked(opt, mod)
+      end
     else
-      sample = model:sample(opt)
+      if opt.suppress ~= '' then
+        print("Running in simple oulipo mode")
+        local mod = make_suppressor(opt.suppress)
+        sample = model:sample_hacked(opt, mod)
+      else
+        sample = model:sample(opt)
+      end
     end
   end
 else
@@ -377,21 +471,26 @@ collectgarbage()
 
 --print("After collection:", collectgarbage("count") * 1024)
 
-opt['wordcount'] = #word_indices
+local jsonfile
+local textfile
+local jsonfilename
+local textfilename
 
-local jsonfilename = opt.outdir .. '/' .. opt.name .. '.json'
-local textfilename = opt.outdir .. '/' .. opt.name .. '.txt'
+if opt.outdir ~= '' then
+  jsonfilename = opt.outdir .. '/' .. opt.name .. '.json'
+  textfilename = opt.outdir .. '/' .. opt.name .. '.txt'
 
-local jsonfile = io.open(jsonfilename, "w")
-jsonfile:write(pretty({ words = word_indices, settings = opt }))
-jsonfile:close()
+  jsonfile = io.open(jsonfilename, "w")
+  jsonfile:write(pretty({ words = word_indices, settings = opt }))
+  jsonfile:close()
 
-print("Wrote word indices to " .. jsonfilename)
+  --print("Wrote word indices to " .. jsonfilename)
 
-local textfile = io.open(textfilename, "w")
-textfile:write(sample)
-textfile:close()
+  textfile = io.open(textfilename, "w")
+  textfile:write(sample)
+  textfile:close()
 
-print("Wrote text output to " .. textfilename)
+  --print("Wrote text output to " .. textfilename)
+end
 
 print(sample)
